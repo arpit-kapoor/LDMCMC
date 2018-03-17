@@ -1,1 +1,1 @@
-#  Langevin Dynamics MCMC for FNN time series
+#  Langevin Dynamics MCMC
