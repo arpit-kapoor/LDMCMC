@@ -34,7 +34,8 @@ from scipy.stats import multivariate_normal
 from scipy.stats import norm
 import math
 import os
-
+from expdata import setexperimentdata
+import sys
 
 # An example of a class
 class Network:
@@ -137,7 +138,7 @@ class Network:
 
         Input = np.zeros((1, self.Top[0]))  # temp hold input
         Desired = np.zeros((1, self.Top[2]))
-        fx = np.zeros(size)
+        fx = np.zeros((size,self.Top[2]))
 
         for i in xrange(0, size):  # to see what fx is produced by your current weight update
             Input = data[i, 0:self.Top[0]]
@@ -149,6 +150,16 @@ class Network:
 
 
 # --------------------------------------------------------------------------
+
+def covert_time(secs):
+    if secs >= 60:
+        mins = secs/60
+        secs = secs%60
+    else:
+        secs = secs
+        mins = 0
+    return mins,secs
+
 
 # -------------------------------------------------------------------
 
@@ -165,7 +176,7 @@ class MCMC:
         return np.sqrt(((predictions - targets) ** 2).mean())
 
     def likelihood_func(self, neuralnet, data, w, tausq):
-        y = data[:, self.topology[0]]
+        y = data[:, self.topology[0]:]
         fx = neuralnet.evaluate_proposal(data, w)
         rmse = self.rmse(fx, y)
         loss = -0.5 * np.log(2 * math.pi * tausq) - 0.5 * np.square(y - fx) / tausq
@@ -179,7 +190,9 @@ class MCMC:
         log_loss = part1 - part2  - (1 + nu_1) * np.log(tausq) - (nu_2 / tausq)
         return log_loss
 
-    def sampler(self, w_limit, tau_limit):
+    def sampler(self, w_limit, tau_limit, file):
+
+        start = time.time()
 
         # ------------------- initialize MCMC
         testsize = self.testdata.shape[0]
@@ -193,18 +206,18 @@ class MCMC:
         x_train = np.linspace(0, 1, num=trainsize)
 
         netw = self.topology  # [input, hidden, output]
-        y_test = self.testdata[:, netw[0]]
-        y_train = self.traindata[:, netw[0]]
-        print y_train.size
-        print y_test.size
+        y_test = self.testdata[:, netw[0]:]
+        y_train = self.traindata[:, netw[0]:]
+        # print y_train.shape
+        # print y_test.shape
 
         w_size = (netw[0] * netw[1]) + (netw[1] * netw[2]) + netw[1] + netw[2]  # num of weights and bias
 
         pos_w = np.ones((samples, w_size))  # posterior of all weights and bias over all samples
         pos_tau = np.ones((samples, 1))
 
-        fxtrain_samples = np.ones((samples, trainsize))  # fx of train data over all samples
-        fxtest_samples = np.ones((samples, testsize))  # fx of test data over all samples
+        fxtrain_samples = np.ones((samples, trainsize, netw[2]))  # fx of train data over all samples
+        fxtest_samples = np.ones((samples, testsize, netw[2]))  # fx of test data over all samples
         rmse_train = np.zeros(samples)
         rmse_test = np.zeros(samples)
 
@@ -221,10 +234,12 @@ class MCMC:
         learn_rate = 0.5
 
         neuralnet = Network(self.topology, self.traindata, self.testdata, learn_rate)
-        print 'evaluate Initial w'
+        # print 'evaluate Initial w'
 
         pred_train = neuralnet.evaluate_proposal(self.traindata, w)
         pred_test = neuralnet.evaluate_proposal(self.testdata, w)
+
+
 
         eta = np.log(np.var(pred_train - y_train))
         tau_pro = np.exp(eta)
@@ -245,15 +260,15 @@ class MCMC:
         [likelihood, pred_train, rmsetrain] = self.likelihood_func(neuralnet, self.traindata, w, tau_pro)
         [likelihood_ignore, pred_test, rmsetest] = self.likelihood_func(neuralnet, self.testdata, w, tau_pro)
 
-        print likelihood
+        # print likelihood
 
         naccept = 0
-        print 'begin sampling using mcmc random walk'
-        plt.plot(x_train, y_train)
-        plt.plot(x_train, pred_train)
-        plt.title("Plot of Data vs Initial Fx")
-        plt.savefig('mcmcresults/begin.png')
-        plt.clf()
+        # print 'begin sampling using mcmc random walk'
+        # plt.plot(x_train, y_train)
+        # plt.plot(x_train, pred_train)
+        # plt.title("Plot of Data vs Initial Fx")
+        # plt.savefig('mcmcresults/begin.png')
+        # plt.clf()
 
         plt.plot(x_train, y_train)
 
@@ -266,6 +281,8 @@ class MCMC:
             w_proposal = w_gd  + np.random.normal(0, step_w, w_size) # Eq 7
 
             w_prop_gd = neuralnet.langevin_gradient(self.traindata, w_proposal.copy(), self.sgd_depth)
+
+            # print(multivariate_normal.pdf(w, w_prop_gd, sigma_diagmat),multivariate_normal.pdf(w_proposal, w_gd, sigma_diagmat))
 
             diff_prop =  np.log(multivariate_normal.pdf(w, w_prop_gd, sigma_diagmat)  - np.log(multivariate_normal.pdf(w_proposal, w_gd, sigma_diagmat)))
 
@@ -284,10 +301,12 @@ class MCMC:
 
 
             diff_prior = prior_prop - prior_current
-
             diff_likelihood = likelihood_proposal - likelihood
-
+            # print()
+            # print(diff_likelihood+diff_prior+diff_prop)
             mh_prob = min(1, math.exp(diff_likelihood + diff_prior + diff_prop))
+            # print(mh_prob)
+
 
 
 
@@ -295,14 +314,16 @@ class MCMC:
 
             if u < mh_prob:
                 # Update position
-                print    i, ' is accepted sample'
+                # print    i, ' is accepted sample'
                 naccept += 1
                 likelihood = likelihood_proposal
                 prior_current = prior_prop
                 w = w_proposal
                 eta = eta_pro
 
-                print  likelihood, prior_current, diff_prop, rmsetrain, rmsetest, w, 'accepted'
+                elapsed_time = ":".join(list(map(str,covert_time(int(time.time()-start)))))
+                sys.stdout.write('\r' + file + ' : ' + str(round(float(i) / (samples - 1) * 100, 2)) + '% complete....'+" time elapsed: " + elapsed_time)
+                # print  likelihood, prior_current, diff_prop, rmsetrain, rmsetest, w, 'accepted'
                 #print w_proposal, 'w_proposal'
                 #print w_gd, 'w_gd'
 
@@ -327,81 +348,51 @@ class MCMC:
                 rmse_test[i + 1,] = rmse_test[i,]
 
                 # print i, 'rejected and retained'
-
-        print naccept, ' num accepted'
-        print naccept / (samples * 1.0), '% was accepted'
+        sys.stdout.write('\r' + file + ' : ' + str(round(float(samples - 1) / (samples - 1) * 100, 2)) + '% complete....')
+        # print naccept, ' num accepted'
+        # print naccept / (samples * 1.0), '% was accepted'
         accept_ratio = naccept / (samples * 1.0) * 100
 
-        plt.title("Plot of Accepted Proposals")
-        plt.savefig('mcmcresults/proposals.png')
-        plt.savefig('mcmcresults/proposals.svg', format='svg', dpi=600)
-        plt.clf()
+        # plt.title("Plot of Accepted Proposals")
+        # plt.savefig('mcmcresults/proposals.png')
+        # plt.savefig('mcmcresults/proposals.svg', format='svg', dpi=600)
+        # plt.clf()
 
         return (pos_w, pos_tau, fxtrain_samples, fxtest_samples, x_train, x_test, rmse_train, rmse_test, accept_ratio)
 
 
 def main():
-    for problem in xrange(1, 8):
+    filenames = ["Iris", "Wine", "Cancer", "Heart", "CreditApproval", "Baloon", "TicTac", "Ions", "Zoo",
+                 "Lenses", "Balance", "Robot-Four", "Robot-TwentyFour"]
+    problemlist = np.array(range(13))
+    input = np.array([4, 13, 9, 13, 15, 4, 9, 34, 16, 4, 4, 4, 24])
+    hidden = np.array([6, 6, 6, 16, 20, 5, 30, 8, 6, 5, 8, 14, 14])
+    output = np.array([2, 3, 1, 1, 1, 1, 1, 1, 7, 3, 3, 4, 4])
 
-        path = str(problem)+'mcmcresults'
-        try:
-            os.makedirs(path)
-        except OSError:
-            if not os.path.isdir(path):
-                raise
-        outres = open(path+'/resultspriors.txt', 'w')
-        outpos_w = open(path+'/pos_w.txt', 'w')
+    samplelist = [5000, 18000, 10000, 20000, 30000, 5000, 20000, 5000, 3000, 5000, 2000, 20000, 20000]
+    x = 3
 
-        hidden = 5
-        input = 4  #
-        output = 1
- 
-        x = 3
- 
-        if x == 3:
-            w_limit =  0.02
-            tau_limit = 0.2
-        #if x == 4:
-            #w_limit =  0.02
-            #tau_limit = 0.1  
+    if x == 3:
+        w_limit =  0.02
+        tau_limit = 0.2
+    #if x == 4:
+        #w_limit =  0.02
+        #tau_limit = 0.1
 
+    for problem in problemlist[1:2]:
 
+        [traindata, testdata, baseNet] = setexperimentdata(problem)
 
-        if problem == 1:
-            traindata = np.loadtxt("Data_OneStepAhead/Lazer/train.txt")
-            testdata = np.loadtxt("Data_OneStepAhead/Lazer/test.txt")  #
-        if problem == 2:
-            traindata = np.loadtxt("Data_OneStepAhead/Sunspot/train.txt")
-            testdata = np.loadtxt("Data_OneStepAhead/Sunspot/test.txt")  #
-        if problem == 3:
-            traindata = np.loadtxt("Data_OneStepAhead/Mackey/train.txt")
-            testdata = np.loadtxt("Data_OneStepAhead/Mackey/test.txt")  #
-        if problem == 4:
-            traindata = np.loadtxt("Data_OneStepAhead/Lorenz/train.txt")
-            testdata = np.loadtxt("Data_OneStepAhead/Lorenz/test.txt")  #
-        if problem == 5:
-            traindata = np.loadtxt("Data_OneStepAhead/Rossler/train.txt")
-            testdata = np.loadtxt("Data_OneStepAhead/Rossler/test.txt")  #
-        if problem == 6:
-            traindata = np.loadtxt("Data_OneStepAhead/Henon/train.txt")
-            testdata = np.loadtxt("Data_OneStepAhead/Henon/test.txt")  #
-        if problem == 7:
-            traindata = np.loadtxt("Data_OneStepAhead/ACFinance/train.txt")
-            testdata = np.loadtxt("Data_OneStepAhead/ACFinance/test.txt")  #
-
-        print(traindata)
-
-        topology = [input, hidden, output]
-
+        topology = [input[problem], hidden[problem], output[problem]]
 
         random.seed(time.time())
 
-        numSamples = 40000   # need to decide yourself
+        numSamples = samplelist[problem]   # need to decide yourself
 
         mcmc = MCMC(numSamples, traindata, testdata, topology)  # declare class
 
-        [pos_w, pos_tau, fx_train, fx_test, x_train, x_test, rmse_train, rmse_test, accept_ratio] = mcmc.sampler(w_limit, tau_limit)
-        print 'sucessfully sampled'
+        [pos_w, pos_tau, fx_train, fx_test, x_train, x_test, rmse_train, rmse_test, accept_ratio] = mcmc.sampler(w_limit, tau_limit, filenames[problem])
+        print 'sucessfully sampled: '+ str(accept_ratio)+ ' samples accepted'
 
         burnin = 0.1 * numSamples  # use post burn in samples
 
@@ -417,62 +408,43 @@ def main():
         fx_low_tr = np.percentile(fx_train, 5, axis=0)
 
         pos_w_mean = pos_w.mean(axis=0)
-        np.savetxt(outpos_w, pos_w_mean, fmt='%1.5f')
-
-
-
-
+        # np.savetxt(outpos_w, pos_w_mean, fmt='%1.5f')
 
 
         rmse_tr = np.mean(rmse_train[int(burnin):])
         rmsetr_std = np.std(rmse_train[int(burnin):])
         rmse_tes = np.mean(rmse_test[int(burnin):])
         rmsetest_std = np.std(rmse_test[int(burnin):])
-        print rmse_tr, rmsetr_std, rmse_tes, rmsetest_std
-        np.savetxt(outres, (rmse_tr, rmsetr_std, rmse_tes, rmsetest_std, accept_ratio), fmt='%1.5f')
+        # print rmse_tr, rmsetr_std, rmse_tes, rmsetest_std
+        # np.savetxt(outres, (rmse_tr, rmsetr_std, rmse_tes, rmsetest_std, accept_ratio), fmt='%1.5f')
 
-        ytestdata = testdata[:, input]
-        ytraindata = traindata[:, input]
+        ytestdata = testdata[:, input[problem]:]
+        ytraindata = traindata[:, input[problem]:]
 
-        plt.plot(x_test, ytestdata, label='actual')
-        plt.plot(x_test, fx_mu, label='pred. (mean)')
-        plt.plot(x_test, fx_low, label='pred.(5th percen.)')
-        plt.plot(x_test, fx_high, label='pred.(95th percen.)')
-        plt.fill_between(x_test, fx_low, fx_high, facecolor='g', alpha=0.4)
-        plt.legend(loc='upper right')
+        testResults = np.c_[ytestdata, fx_mu, fx_high, fx_low]
 
-        plt.title("Plot of Test Data vs MCMC Uncertainty ")
-        plt.savefig(path+'/mcmcrestest.png')
-        plt.savefig(path+'/mcmcrestest.svg', format='svg', dpi=600)
-        plt.clf()
-        # -----------------------------------------
-        plt.plot(x_train, ytraindata, label='actual')
-        plt.plot(x_train, fx_mu_tr, label='pred. (mean)')
-        plt.plot(x_train, fx_low_tr, label='pred.(5th percen.)')
-        plt.plot(x_train, fx_high_tr, label='pred.(95th percen.)')
-        plt.fill_between(x_train, fx_low_tr, fx_high_tr, facecolor='g', alpha=0.4)
-        plt.legend(loc='upper right')
+        trainResults = np.c_[ytraindata, fx_mu_tr, fx_high_tr, fx_low_tr]
 
-        plt.title("Plot of Train Data vs MCMC Uncertainty ")
-        plt.savefig(path+'/mcmcrestrain.png')
-        plt.savefig(path+'/mcmcrestrain.svg', format='svg', dpi=600)
-        plt.clf()
+        # Write RMSE to
+        with open("Results/" +
+                  filenames[problem] + "_rmse" + ".txt", 'w') as fil:
+            rmse = [rmse_tr, rmsetr_std, rmse_tes, rmsetest_std]
+            rmse = "\t".join(list(map(str, rmse))) + "\n"
+            fil.write(rmse)
 
-        mpl_fig = plt.figure()
-        ax = mpl_fig.add_subplot(111)
+        with open("test/" +
+                  filenames[problem] + ".txt", 'w') as fil:
+            for vals in testResults:
+                writestr = list(map(str, vals))
+                writestr = "\t".join(writestr)
+                fil.write(writestr + "\n")
 
-        ax.boxplot(pos_w)
-
-        ax.set_xlabel('[W1] [B1] [W2] [B2]')
-        ax.set_ylabel('Posterior')
-
-        plt.legend(loc='upper right')
-
-        plt.title("Boxplot of Posterior W (weights and biases)")
-        plt.savefig(path+'/w_pos.png')
-        plt.savefig(path+'/w_pos.svg', format='svg', dpi=600)
-
-        plt.clf()
+        with open("train/" +
+                  filenames[problem] + ".txt", 'w') as fil:
+            for vals in trainResults:
+                writestr = list(map(str, vals))
+                writestr = "\t".join(writestr)
+                fil.write(writestr + "\n")
 
 
 if __name__ == "__main__": main()
