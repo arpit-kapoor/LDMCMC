@@ -29,105 +29,108 @@ def calAccuracy(file,out,path):
         accuracy = [round(float(cnt)/size*100,2) for cnt in count]
         return accuracy
     except Exception as e:
-        # raise Exception("File no file named "+ str(file))
+        # print Exception("File no file named "+ str(file))
         return None
 
 if __name__ == '__main__':
     # for subtask in range(4,5):
     subtask = 4
-    filenames = ["Iris", "Wine", "Cancer", "Heart", "CreditApproval", "Baloon", "TicTac", "Ions",
-                 "Zoo", "Lenses", "Balance", "Robot-Four"]
+    filenames_set = [["Iris", "Wine", "Cancer", "Heart"], ["Baloon", "Ions", "Zoo", "Lenses", "Balance"]]
     # filenames = ["Iris", "Wine", "Cancer", "Heart", "CreditApproval", "Baloon", "TicTac", "Ions", "Lenses", "Balance"]
-    out = [2, 3, 1, 1, 1, 1, 1, 1, 7, 3, 3, 4, 4]
-    out = dict(zip(filenames, out))
+    out_set = [[2, 3, 1, 1], [1, 1, 7, 3, 3]]
+    count = 1
 
-    for set in ['train','test']:
-        accuracydict = {}
-        accuracy = []
-        path = set+'/'
-        # print(path)
-        for file in filenames:
-            acc = []
-            acc = calAccuracy(file,out[file],path)
-            if acc == None:
-                continue
-            print acc
-            accuracydict[file] = acc
-            accuracy.append(acc)
+    for filenames,out in zip(filenames_set,out_set):
+        out = dict(zip(filenames, out))
 
-        accuracy = np.asarray(accuracy).transpose()
-        print(accuracy)
+        for set in ['train','test']:
+            accuracydict = {}
+            accuracy = []
+            path = set+'/'
+            # print(path)
+            for file in filenames:
+                acc = []
+                acc = calAccuracy(file, out[file], path)
+                if acc == None:
+                    continue
+                #print acc
+                accuracydict[file] = acc
+                accuracy.append(acc)
 
-
-        # data to plot
-        n_groups = len(accuracydict)
-
-        # create plot
-        fig, ax = plt.subplots()
-        index = np.arange(n_groups)
-        bar_width = 0.20
-        opacity = 0.8
-        capsize = 3
-        err = float(5)/100
-
-        # Sub-Task1
-        plt.errorbar(index, accuracy[0], err*accuracy[0] ,
-                        alpha=opacity,
-                        color='c',
-                        capsize=capsize,
-                        capthick=None,
-                        fmt=None)
-
-        plt.bar(index, accuracy[0], bar_width,
-                        alpha=opacity,
-                        color='b',
-                        label='fx_mu')
+            accuracy = np.asarray(accuracy).transpose()
+            #print(accuracy)
 
 
-        # Sub-Task 2
-        plt.errorbar(index + bar_width, accuracy[1], err*accuracy[1],
-                        alpha=opacity,
-                        color='b',
-                        capsize=capsize,
-                        fmt= None)
+            # data to plot
+            n_groups = len(accuracydict)
 
-        plt.bar(index + bar_width, accuracy[1], bar_width,
-                        alpha=opacity,
-                        color='c',
-                        label='fx_high')
+            # create plot
+            fig, ax = plt.subplots()
+            index = np.arange(n_groups)
+            bar_width = 0.20
+            opacity = 0.8
+            capsize = 3
+            err = float(5)/100
 
-        # Sub-Task 3
-        plt.errorbar(index + 2*bar_width, accuracy[2], err*accuracy[2],
-                        alpha=opacity,
-                        color='y',
-                        capsize=capsize,
-                        fmt=None)
+            # Sub-Task1
+            plt.errorbar(index, accuracy[0], err*accuracy[0] ,
+                            alpha=opacity,
+                            color='c',
+                            capsize=capsize,
+                            capthick=None,
+                            fmt=None)
 
-        plt.bar(index + 2*bar_width, accuracy[2], bar_width,
-                        alpha=opacity,
-                        color='m',
-                        label='fx_low')
-
-        # # Sub-Task 4
-        # plt.errorbar(index + 3*bar_width, accuracy[3], err*accuracy[3],
-        #                 alpha=opacity,
-        #                 color='g',
-        #                 capsize=capsize,
-        #                 fmt= None)
-        #
-        # plt.bar(index + 3*bar_width, accuracy[3], bar_width,
-        #                  alpha=opacity,
-        #                  color='y',
-        #                  label='ST4')
+            plt.bar(index, accuracy[0], bar_width,
+                            alpha=opacity,
+                            color='b',
+                            label='fx_mu')
 
 
+            # Sub-Task 2
+            plt.errorbar(index + bar_width, accuracy[1], err*accuracy[1],
+                            alpha=opacity,
+                            color='b',
+                            capsize=capsize,
+                            fmt= None)
 
-        plt.xlabel('Datasets')
-        plt.ylabel('Accuracy')
-        plt.title(set.capitalize()+' Data Accuracy')
-        plt.xticks(index + bar_width, filenames, rotation = 70)
-        plt.legend()
+            plt.bar(index + bar_width, accuracy[1], bar_width,
+                            alpha=opacity,
+                            color='c',
+                            label='fx_high')
 
-        plt.tight_layout()
-        plt.savefig(set.capitalize()+'Data'+'.png')
-        # plt.show()
+            # Sub-Task 3
+            plt.errorbar(index + 2*bar_width, accuracy[2], err*accuracy[2],
+                            alpha=opacity,
+                            color='y',
+                            capsize=capsize,
+                            fmt=None)
+
+            plt.bar(index + 2*bar_width, accuracy[2], bar_width,
+                            alpha=opacity,
+                            color='m',
+                            label='fx_low')
+
+            # # Sub-Task 4
+            # plt.errorbar(index + 3*bar_width, accuracy[3], err*accuracy[3],
+            #                 alpha=opacity,
+            #                 color='g',
+            #                 capsize=capsize,
+            #                 fmt= None)
+            #
+            # plt.bar(index + 3*bar_width, accuracy[3], bar_width,
+            #                  alpha=opacity,
+            #                  color='y',
+            #                  label='ST4')
+
+
+
+            plt.xlabel('Datasets')
+            plt.ylabel('Accuracy')
+            plt.title(set.capitalize()+' Data Accuracy')
+            plt.xticks(index + bar_width, filenames, rotation = 70)
+            plt.legend()
+
+            plt.tight_layout()
+            plt.savefig(set.capitalize()+'Data'+str(count)+'.png')
+            # plt.show()
+        count += 1

@@ -153,12 +153,19 @@ class Network:
 
 def covert_time(secs):
     if secs >= 60:
-        mins = secs/60
-        secs = secs%60
+        mins = str(secs/60)
+        secs = str(secs%60)
     else:
-        secs = secs
-        mins = 0
-    return mins,secs
+        secs = str(secs)
+        mins = str(00)
+
+    if len(mins) == 1:
+        mins = '0'+mins
+
+    if len(secs) == 1:
+        secs = '0'+secs
+
+    return [mins, secs]
 
 
 # -------------------------------------------------------------------
@@ -302,9 +309,11 @@ class MCMC:
 
             diff_prior = prior_prop - prior_current
             diff_likelihood = likelihood_proposal - likelihood
+            diff = min(700, diff_prior + diff_likelihood + diff_prop)
+
             # print()
             # print(diff_likelihood+diff_prior+diff_prop)
-            mh_prob = min(1, math.exp(diff_likelihood + diff_prior + diff_prop))
+            mh_prob = min(1, math.exp(diff))
             # print(mh_prob)
 
 
@@ -321,7 +330,7 @@ class MCMC:
                 w = w_proposal
                 eta = eta_pro
 
-                elapsed_time = ":".join(list(map(str,covert_time(int(time.time()-start)))))
+                elapsed_time = ":".join(covert_time(int(time.time()-start)))
                 sys.stdout.write('\r' + file + ' : ' + str(round(float(i) / (samples - 1) * 100, 2)) + '% complete....'+" time elapsed: " + elapsed_time)
                 # print  likelihood, prior_current, diff_prop, rmsetrain, rmsetest, w, 'accepted'
                 #print w_proposal, 'w_proposal'
@@ -348,7 +357,7 @@ class MCMC:
                 rmse_test[i + 1,] = rmse_test[i,]
 
                 # print i, 'rejected and retained'
-        sys.stdout.write('\r' + file + ' : ' + str(round(float(samples - 1) / (samples - 1) * 100, 2)) + '% complete....')
+        sys.stdout.write('\r' + file + ' : 100% ..... Total Time: ' + ":".join(covert_time(int(time.time()-start))))
         # print naccept, ' num accepted'
         # print naccept / (samples * 1.0), '% was accepted'
         accept_ratio = naccept / (samples * 1.0) * 100
@@ -369,7 +378,7 @@ def main():
     hidden = np.array([6, 6, 6, 16, 20, 5, 30, 8, 6, 5, 8, 14, 14])
     output = np.array([2, 3, 1, 1, 1, 1, 1, 1, 7, 3, 3, 4, 4])
 
-    samplelist = [5000, 18000, 10000, 20000, 30000, 5000, 20000, 5000, 3000, 5000, 2000, 20000, 20000]
+    samplelist = [5000, 18000, 10000, 20000, 3000, 5000, 20000, 5000, 3000, 5000, 2000, 2000, 2000]
     x = 3
 
     if x == 3:
@@ -379,7 +388,11 @@ def main():
         #w_limit =  0.02
         #tau_limit = 0.1
 
-    for problem in problemlist[1:2]:
+    for problem in problemlist:
+
+        if os.path.isfile("Results/"+filenames[problem]+"_rmse.txt"):
+            print filenames[problem]
+            continue
 
         [traindata, testdata, baseNet] = setexperimentdata(problem)
 
