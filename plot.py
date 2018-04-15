@@ -35,9 +35,9 @@ def calAccuracy(file,out,path):
 if __name__ == '__main__':
     # for subtask in range(4,5):
     subtask = 4
-    filenames_set = [["Iris", "Wine", "Cancer", "Heart"], ["Baloon", "Ions", "Zoo", "Lenses", "Balance"]]
+    filenames_set = [["Iris", "Wine", "Cancer", "Baloon", "Ions", "Zoo", "Lenses", "Balance", "CreditApproval"]]
     # filenames = ["Iris", "Wine", "Cancer", "Heart", "CreditApproval", "Baloon", "TicTac", "Ions", "Lenses", "Balance"]
-    out_set = [[2, 3, 1, 1], [1, 1, 7, 3, 3]]
+    out_set = [[2, 3, 1, 1, 1, 7, 3, 3, 1]]
     count = 1
 
     for filenames,out in zip(filenames_set,out_set):
@@ -67,20 +67,20 @@ if __name__ == '__main__':
             # create plot
             fig, ax = plt.subplots()
             index = np.arange(n_groups)
-            bar_width = 0.20
+            bar_width = 0.2
             opacity = 0.8
             capsize = 3
             err = float(5)/100
 
             # Sub-Task1
-            plt.errorbar(index, accuracy[0], err*accuracy[0] ,
+            plt.errorbar(index + bar_width, accuracy[0], err*accuracy[0] ,
                             alpha=opacity,
                             color='c',
                             capsize=capsize,
                             capthick=None,
                             fmt=None)
 
-            plt.bar(index, accuracy[0], bar_width,
+            plt.bar(index , accuracy[0], bar_width,
                             alpha=opacity,
                             color='b',
                             label='fx_mu')
@@ -131,6 +131,6 @@ if __name__ == '__main__':
             plt.legend()
 
             plt.tight_layout()
-            plt.savefig(set.capitalize()+'Data'+str(count)+'.png')
-            # plt.show()
+            # plt.savefig(set.capitalize()+'Data'+str(count)+'.png')
+            plt.show()
         count += 1
