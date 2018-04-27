@@ -1,4 +1,4 @@
-# !/usr/bin/python
+# i/usr/bin/python
 
 # MCMC Random Walk for Feedforward Neural Network for One-Step-Ahead Chaotic Time Series Prediction
 
@@ -375,19 +375,30 @@ def main():
     hidden = np.array([6, 6, 6, 16, 20, 5, 30, 8, 6, 5, 8, 14, 14])
     output = np.array([2, 3, 1, 1, 1, 1, 1, 1, 7, 3, 3, 4, 4])
 
-    samplelist = [5000, 5000, 10000, 20000, 3000, 5000, 20000, 5000, 3000, 5000, 2000, 2000, 2000]
+    samplelist = [5000, 6000, 10000, 20000, 3000, 5000, 20000, 5000, 3000, 5000, 2000, 2000, 2000]
     x = 3
 
-    train_accs = []
-    test_accs = []
-
-    train_stds = []
-    test_stds = []
+    filetrain = open('train.txt', 'r')
+    filetest = open('test.txt', 'r')
+    filestdtr = open('std_tr.txt','r')
+    filestdts = open('std_ts.txt', 'r')
     
-    filetrain = open('train.txt', 'w')
-    filetest = open('test.txt)', 'w')
-    filestdtr = open('std_tr.txt','w')
-    filestdts = open('std_ts.txt', 'w')
+    train_accs = np.loadtxt(filetrain)
+    test_accs = np.loadtxt(filetest)
+
+    train_stds = np.loadtxt(filestdtr)
+    test_stds = np.loadtxt(filestdts)
+    
+    filetrain.close()
+    filetest.close()
+    filestdtr.close()
+    filestdts.close()
+    
+    filetrain = open('train.txt', 'w+')
+    filetest = open('test.txt', 'w+')
+    filestdtr = open('std_tr.txt','w+')
+    filestdts = open('std_ts.txt', 'w+')
+    
 
     if x == 3:
         w_limit =  0.02
@@ -396,11 +407,11 @@ def main():
         #w_limit =  0.02
         #tau_limit = 0.1
 
-    for problem in problemlist:
+    for problem in range(1,2):
 
         #if os.path.isfile("Results/"+filenames[problem]+"_rmse.txt"):
         #    print filenames[problem]
-        #    continue
+        #    continur
 
         [traindata, testdata, baseNet] = setexperimentdata(problem)
 
@@ -471,10 +482,10 @@ def main():
         train_acc_mu = train_acc.mean() 
         test_acc_mu = test_acc.mean()      
     
-        train_accs.append(train_acc_mu)
-        test_accs.append(test_acc_mu)
-        train_stds.append(train_std)
-        test_stds.append(test_std)
+        train_accs[problem] = train_acc_mu
+        test_accs[problem] = test_acc_mu
+        train_stds[problem] = train_std
+        test_stds[problem] = test_std
          
         testResults = np.c_[ytestdata, fx_mu, fx_high, fx_low]
 
@@ -504,20 +515,20 @@ def main():
     filestdtr.close()
     filestdts.close()
    
-    
+    print(train_accs) 
     plt.bar(index + float(bar_width)/2, train_accs, bar_width,
                     alpha = opacity,
                     error_kw = dict(elinewidth=1, ecolor='r'),
                     yerr = train_stds,
                     color = 'c',
-                    label = 'train accuracy')
+                    label = 'train')
 
     plt.bar(index + float(bar_width)/2 + bar_width, test_accs, bar_width,
                     alpha = opacity,
                     error_kw = dict(elinewidth=1, ecolor='g'),
                     yerr = test_stds,
                     color = 'b',
-                    label = 'test accuracy')
+                    label = 'test')
     plt.xlabel('Datasets')
     plt.ylabel('Accuracy')
     plt.xticks(index+bar_width, filenames, rotation=70)
