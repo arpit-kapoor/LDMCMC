@@ -1,14 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from operator import add
-
-
-def roundClass(val):
-    if val <= 0.5:
-        val = 0.0
-    elif val > 0.5:
-        val = 1.0
-    return val
+import traceback
+import sys
 
 def calAccuracy(file,out,path):
     try:
@@ -19,25 +13,20 @@ def calAccuracy(file,out,path):
         count = [0 for x in range(3)]
 
         for line in lines:
-            line = line.strip().split()
-            line = [roundClass(val) for val in list(map(float, line))]
-            # print(path+file,len(line),line)
-            countAdd = [1 if line[:out] == line[index:index+out] else 0 for index in range(out,len(line),out)]
-            # print(file, out, line, countAdd)
+            line = list(map(float,line.strip().split()))
+            countAdd = [1 if np.isclose(line[:out],line[index:index+out], atol=0.2).all() else 0 for index in range(out, len(line), out)]
             count = list(map(add, count, countAdd))
 
         accuracy = [round(float(cnt)/size*100,2) for cnt in count]
         return accuracy
     except Exception as e:
-        # print Exception("File no file named "+ str(file))
+        traceback.print_exception(*sys.exc_info())
         return None
 
 if __name__ == '__main__':
-    # for subtask in range(4,5):
     subtask = 4
-    filenames_set = [["Iris", "Wine", "Cancer", "Baloon", "Ions", "Zoo", "Lenses", "Balance", "CreditApproval"]]
-    # filenames = ["Iris", "Wine", "Cancer", "Heart", "CreditApproval", "Baloon", "TicTac", "Ions", "Lenses", "Balance"]
-    out_set = [[2, 3, 1, 1, 1, 7, 3, 3, 1]]
+    filenames_set = [["Iris", "Wine", "Cancer", "Baloon", "Ions", "Zoo", "Lenses", "Balance"], ["CreditApproval","TicTac","Robot-Four", "Robot-TwentyFour"]]
+    out_set = [[2, 3, 1, 1, 1, 7, 3, 3], [1, 1, 4, 4]]
     count = 1
 
     for filenames,out in zip(filenames_set,out_set):
@@ -58,7 +47,7 @@ if __name__ == '__main__':
                 accuracy.append(acc)
 
             accuracy = np.asarray(accuracy).transpose()
-            #print(accuracy)
+            print(accuracy)
 
 
             # data to plot
@@ -67,60 +56,21 @@ if __name__ == '__main__':
             # create plot
             fig, ax = plt.subplots()
             index = np.arange(n_groups)
-            bar_width = 0.2
+            bar_width = 0.45
             opacity = 0.8
             capsize = 3
             err = float(5)/100
+            
+            ytop = accuracy[1]-accuracy[0]
+            ybot = accuracy[0]-accuracy[2]
 
-            # Sub-Task1
-            plt.errorbar(index + bar_width, accuracy[0], err*accuracy[0] ,
+            plt.bar(index +float(bar_width)/2, accuracy[0], bar_width,
                             alpha=opacity,
+                            #error_kw=dict(elinewidth=1, ecolor='r'),
+                            #yerr=(ybot,ytop),
                             color='c',
-                            capsize=capsize,
-                            capthick=None,
-                            fmt=None)
+                            label=set+' accuracy')
 
-            plt.bar(index , accuracy[0], bar_width,
-                            alpha=opacity,
-                            color='b',
-                            label='fx_mu')
-
-
-            # Sub-Task 2
-            plt.errorbar(index + bar_width, accuracy[1], err*accuracy[1],
-                            alpha=opacity,
-                            color='b',
-                            capsize=capsize,
-                            fmt= None)
-
-            plt.bar(index + bar_width, accuracy[1], bar_width,
-                            alpha=opacity,
-                            color='c',
-                            label='fx_high')
-
-            # Sub-Task 3
-            plt.errorbar(index + 2*bar_width, accuracy[2], err*accuracy[2],
-                            alpha=opacity,
-                            color='y',
-                            capsize=capsize,
-                            fmt=None)
-
-            plt.bar(index + 2*bar_width, accuracy[2], bar_width,
-                            alpha=opacity,
-                            color='m',
-                            label='fx_low')
-
-            # # Sub-Task 4
-            # plt.errorbar(index + 3*bar_width, accuracy[3], err*accuracy[3],
-            #                 alpha=opacity,
-            #                 color='g',
-            #                 capsize=capsize,
-            #                 fmt= None)
-            #
-            # plt.bar(index + 3*bar_width, accuracy[3], bar_width,
-            #                  alpha=opacity,
-            #                  color='y',
-            #                  label='ST4')
 
 
 
@@ -131,6 +81,6 @@ if __name__ == '__main__':
             plt.legend()
 
             plt.tight_layout()
-            # plt.savefig(set.capitalize()+'Data'+str(count)+'.png')
+            plt.savefig(set.capitalize()+'Data'+str(count)+'.png')
             plt.show()
         count += 1

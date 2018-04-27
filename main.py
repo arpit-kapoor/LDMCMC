@@ -1,6 +1,5 @@
 # !/usr/bin/python
 
-
 # MCMC Random Walk for Feedforward Neural Network for One-Step-Ahead Chaotic Time Series Prediction
 
 # Data (Sunspot and Lazer). Taken' Theorem used for Data Reconstruction (Dimension = 4, Timelag = 2).
@@ -277,12 +276,10 @@ class MCMC:
         # plt.savefig('mcmcresults/begin.png')
         # plt.clf()
 
-        plt.plot(x_train, y_train)
+        #plt.plot(x_train, y_train)
 
 
         for i in range(samples - 1):
-
-
             w_gd = neuralnet.langevin_gradient(self.traindata, w.copy(), self.sgd_depth) # Eq 8
 
             w_proposal = w_gd  + np.random.normal(0, step_w, w_size) # Eq 7
@@ -345,7 +342,7 @@ class MCMC:
                 rmse_train[i + 1,] = rmsetrain
                 rmse_test[i + 1,] = rmsetest
 
-                plt.plot(x_train, pred_train)
+                #plt.plot(x_train, pred_train)
 
 
             else:
@@ -378,8 +375,19 @@ def main():
     hidden = np.array([6, 6, 6, 16, 20, 5, 30, 8, 6, 5, 8, 14, 14])
     output = np.array([2, 3, 1, 1, 1, 1, 1, 1, 7, 3, 3, 4, 4])
 
-    samplelist = [5000, 10000, 10000, 20000, 3000, 5000, 2000, 5000, 3000, 5000, 2000, 2000, 2000]
+    samplelist = [5000, 5000, 10000, 20000, 3000, 5000, 20000, 5000, 3000, 5000, 2000, 2000, 2000]
     x = 3
+
+    train_accs = []
+    test_accs = []
+
+    train_stds = []
+    test_stds = []
+    
+    filetrain = open('train.txt', 'w')
+    filetest = open('test.txt)', 'w')
+    filestdtr = open('std_tr.txt','w')
+    filestdts = open('std_ts.txt', 'w')
 
     if x == 3:
         w_limit =  0.02
@@ -390,9 +398,9 @@ def main():
 
     for problem in problemlist:
 
-        if os.path.isfile("Results/"+filenames[problem]+"_rmse.txt"):
-            print filenames[problem]
-            continue
+        #if os.path.isfile("Results/"+filenames[problem]+"_rmse.txt"):
+        #    print filenames[problem]
+        #    continue
 
         [traindata, testdata, baseNet] = setexperimentdata(problem)
 
@@ -411,6 +419,9 @@ def main():
 
         pos_w = pos_w[int(burnin):, ]
         pos_tau = pos_tau[int(burnin):, ]
+
+        print("fx shape:"+str(fx_test.shape))
+        print("fx_train shape:"+ str(fx_train.shape))
 
         fx_mu = fx_test.mean(axis=0)
         fx_high = np.percentile(fx_test, 95, axis=0)
@@ -433,7 +444,38 @@ def main():
 
         ytestdata = testdata[:, input[problem]:]
         ytraindata = traindata[:, input[problem]:]
+        
+        train_acc = []
+        test_acc = []
 
+        for fx in fx_train:
+            count = 0
+            for index in range(fx.shape[0]):
+                if np.isclose(fx[index],ytraindata[index],atol = 0.2).all():
+                    count += 1
+            train_acc.append(float(count)/fx.shape[0]*100)
+        
+        for fx in fx_test:
+            count = 0
+            for index in range(fx.shape[0]):
+                if np.isclose(fx[index],ytestdata[index],atol = 0.2).all():
+                    count += 1
+            test_acc.append(float(count)/fx.shape[0]*100)
+       
+        train_acc = np.array(train_acc[int(burnin):])
+        train_std = np.std(train_acc[int(burnin):])
+ 
+        test_acc = np.array(test_acc[int(burnin):])
+        test_std = np.std(test_acc[int(burnin):])
+
+        train_acc_mu = train_acc.mean() 
+        test_acc_mu = test_acc.mean()      
+    
+        train_accs.append(train_acc_mu)
+        test_accs.append(test_acc_mu)
+        train_stds.append(train_std)
+        test_stds.append(test_std)
+         
         testResults = np.c_[ytestdata, fx_mu, fx_high, fx_low]
 
         trainResults = np.c_[ytraindata, fx_mu_tr, fx_high_tr, fx_low_tr]
@@ -445,19 +487,44 @@ def main():
             rmse = "\t".join(list(map(str, rmse))) + "\n"
             fil.write(rmse)
 
-        with open("test/" +
-                  filenames[problem] + ".txt", 'w') as fil:
-            for vals in testResults:
-                writestr = list(map(str, vals))
-                writestr = "\t".join(writestr)
-                fil.write(writestr + "\n")
+    n_groups = len(filenames)
+    fig, ax = plt.subplots()  
+    index = np.arange(n_groups)
+    bar_width = 0.2
+    opacity = 0.8
+    capsize = 3
 
-        with open("train/" +
-                  filenames[problem] + ".txt", 'w') as fil:
-            for vals in trainResults:
-                writestr = list(map(str, vals))
-                writestr = "\t".join(writestr)
-                fil.write(writestr + "\n")
+    np.savetxt(filetrain, train_accs, fmt='%2.2f')
+    np.savetxt(filestdtr, train_stds, fmt='%2.2f')
+    np.savetxt(filetest, test_accs, fmt='%2.2f')
+    np.savetxt(filestdts, test_stds, fmt='%2.2f')
 
+    filetrain.close()
+    filetest.close()
+    filestdtr.close()
+    filestdts.close()
+   
+    
+    plt.bar(index + float(bar_width)/2, train_accs, bar_width,
+                    alpha = opacity,
+                    error_kw = dict(elinewidth=1, ecolor='r'),
+                    yerr = train_stds,
+                    color = 'c',
+                    label = 'train accuracy')
+
+    plt.bar(index + float(bar_width)/2 + bar_width, test_accs, bar_width,
+                    alpha = opacity,
+                    error_kw = dict(elinewidth=1, ecolor='g'),
+                    yerr = test_stds,
+                    color = 'b',
+                    label = 'test accuracy')
+    plt.xlabel('Datasets')
+    plt.ylabel('Accuracy')
+    plt.xticks(index+bar_width, filenames, rotation=70)
+    plt.legend()
+
+    plt.tight_layout()
+    plt.savefig('barplt.png')
+    plt.show()
 
 if __name__ == "__main__": main()
