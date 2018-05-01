@@ -1,30 +1,5 @@
 # i/usr/bin/python
 
-# MCMC Random Walk for Feedforward Neural Network for One-Step-Ahead Chaotic Time Series Prediction
-
-# Data (Sunspot and Lazer). Taken' Theorem used for Data Reconstruction (Dimension = 4, Timelag = 2).
-# Data procesing file is included.
-
-# RMSE (Root Mean Squared Error)
-
-# based on: https://github.com/rohitash-chandra/FNN_TimeSeries
-# based on: https://github.com/rohitash-chandra/mcmc-randomwalk
-
-
-# Rohitash Chandra, Centre for Translational Data Science
-# University of Sydney, Sydney NSW, Australia.  2017 c.rohitash@gmail.conm
-# https://www.researchgate.net/profile/Rohitash_Chandra
-
-
-
-# Reference for publication for this code
-# [Chandra_ICONIP2017] R. Chandra, L. Azizi, S. Cripps, 'Bayesian neural learning via Langevin dynamicsfor chaotic time series prediction', ICONIP 2017.
-# (to be addeded on https://www.researchgate.net/profile/Rohitash_Chandra)
-
-
-
-
-
 import matplotlib.pyplot as plt
 import numpy as np
 import random
