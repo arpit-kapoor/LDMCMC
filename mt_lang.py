@@ -177,7 +177,7 @@ class Network:
                 self.BackwardPass(Input, Desired)
 
         w_updated = self.encode()
-        print(w_updated.shape, self.Top)
+        # print(w_updated.shape, self.Top)
 
         return w_updated
 
@@ -381,7 +381,7 @@ class MCMC:
         prior_prop = np.zeros(self.subtasks)
 
         for i in range(1, samples - 1):
-            print i
+            # print i
             for s in xrange(self.subtasks):
                 # print("B2:")
                 # print(Netlist[s].B2.shape)
@@ -402,16 +402,17 @@ class MCMC:
 
             for s in xrange(self.subtasks-1):
                 [likelihood_proposal[s], pred_train[s, :], rmsetrain[s]] = self.likelihood_func(Netlist[s], self.traindata, w_proposal[s, :netsize[s]], tau_pro, s)
-                # [likelihood_ignore[s], pred_test[s, :], rmsetest[s]] = self.likelihood_func(Netlist[s], self.testdata, w_proposal[s, :netsize[s]], tau_pro, s)
-                # w_proposal[s+1, :netsize[s]] = w_proposal[s, :netsize[s]]
+
+                [_, pred_test[s, :], rmsetest[s]] = self.likelihood_func(Netlist[s], self.testdata, w_proposal[s, :netsize[s]], tau_pro, s)
+                w_proposal[s+1, :netsize[s]] = w_proposal[s, :netsize[s]]
 
             s = self.subtasks - 1
             [likelihood_proposal[s], pred_train[s, :], rmsetrain[s]] = self.likelihood_func(Netlist[s], self.traindata,
                                                                                             w_proposal[s, :netsize[s]],
                                                                                             tau_pro, s)
-            # [likelihood_ignore[s], pred_test[s, :], rmsetest[s]] = self.likelihood_func(Netlist[s], self.testdata,
-            #                                                                             w_proposal[s, :netsize[s]],
-            #                                                                             tau_pro)
+            [_, pred_test[s, :], rmsetest[s]] = self.likelihood_func(Netlist[s], self.testdata,
+                                                                                        w_proposal[s, :netsize[s]],
+                                                                                        tau_pro, s)
 
 
             # likelihood_ignore  refers to parameter that will not be used in the alg.
@@ -451,24 +452,25 @@ class MCMC:
                     # print w_prop_gd, 'w_prop_gd'
 
                     pos_w[i + 1, s, :netsize[s]] = w_proposal[s, :netsize[s]]
-                    pos_tau[i + 1,] = tau_pro
-                    fxtrain_samples[i + 1, s] = pred_train[s]
-                    fxtest_samples[i + 1, s] = pred_test[s]
+                    pos_tau[i + 1] = tau_pro
+                    fxtrain_samples[i + 1, s, :] = pred_train[s, :]
+                    fxtest_samples[i + 1, s, :] = pred_test[s, :]
                     rmse_train[i + 1, s] = rmsetrain[s]
                     rmse_test[i + 1, s] = rmsetest[s]
 
+                    print i, 'accepted'
                     # plt.plot(x_train, pred_train)
 
 
                 else:
                     pos_w[i + 1, s, :netsize[s]] = pos_w[i, s, :netsize[s]]
                     pos_tau[i + 1, s] = pos_tau[i, s]
-                    fxtrain_samples[i + 1, s] = fxtrain_samples[i, s]
-                    fxtest_samples[i + 1, s] = fxtest_samples[i, s]
+                    fxtrain_samples[i + 1, s, :] = fxtrain_samples[i, s, :]
+                    fxtest_samples[i + 1, s, :] = fxtest_samples[i, s, :]
                     rmse_train[i + 1, s] = rmse_train[i, s]
                     rmse_test[i + 1, s] = rmse_test[i, s]
 
-                    # print i, 'rejected and retained'
+                    print i, 'rejected and retained'
         sys.stdout.write('\r' + file + ' : 100% ..... Total Time: ' + ":".join(covert_time(int(time.time() - start))))
         # print naccept, ' num accepted'
         # print naccept / (samples * 1.0), '% was accepted'
@@ -491,24 +493,34 @@ def main():
     hidden = np.array([6, 6, 6, 16, 20, 5, 30, 8, 6, 5, 8, 14, 14])
     output = np.array([2, 3, 1, 1, 1, 1, 1, 1, 7, 3, 3, 4, 4])
 
-    samplelist = [5000, 8000, 10000, 20000, 15000, 5000, 20000, 5000, 3000, 5000, 2000, 20000, 10000]
+    samplelist = [5000, 80, 10000, 20000, 15000, 5000, 20000, 5000, 3000, 5000, 2000, 20000, 10000]
     x = 3
+    subtasks = 4
 
-    filetrain = open('Results/train.txt', 'r')
-    filetest = open('Results/test.txt', 'r')
-    filestdtr = open('Results/std_tr.txt', 'r')
-    filestdts = open('Results/std_ts.txt', 'r')
+    # filetrain = open('Results/train.txt', 'r')
+    # filetest = open('Results/test.txt', 'r')
+    # filestdtr = open('Results/std_tr.txt', 'r')
+    # filestdts = open('Results/std_ts.txt', 'r')
 
-    train_accs = np.loadtxt(filetrain)
-    test_accs = np.loadtxt(filetest)
+    # train_accs = np.loadtxt(filetrain)
+    # test_accs = np.loadtxt(filetest)
+    #
+    # train_stds = np.loadtxt(filestdtr)
+    # test_stds = np.loadtxt(filestdts)
 
-    train_stds = np.loadtxt(filestdtr)
-    test_stds = np.loadtxt(filestdts)
+    # filetrain.close()
+    # filetest.close()
+    # filestdtr.close()
+    # filestdts.close()
 
-    filetrain.close()
-    filetest.close()
-    filestdtr.close()
-    filestdts.close()
+    numproblems = problemlist.size
+
+    train_accs = np.zeros((numproblems, subtasks))
+    test_accs = np.zeros((numproblems, subtasks))
+
+    train_stds = np.zeros((numproblems, subtasks))
+    test_stds = np.zeros((numproblems, subtasks))
+
 
     if x == 3:
         w_limit = 0.02
@@ -527,7 +539,6 @@ def main():
         mtaskNet = np.array([baseNet, baseNet, baseNet, baseNet])
         # print(mtaskNet)
 
-        subtasks = 4
         for i in xrange(1, subtasks):
             # print(mtaskNet)
             mtaskNet[i - 1][0] = moduledecomp[i - 1]
@@ -545,7 +556,7 @@ def main():
 
         [pos_w, pos_tau, fx_train, fx_test, x_train, x_test, rmse_train, rmse_test, accept_ratio] = mcmc.sampler(
             w_limit, tau_limit, filenames[problem])
-        break
+
         print 'sucessfully sampled: ' + str(accept_ratio) + ' samples accepted'
 
         burnin = 0.1 * numSamples  # use post burn in samples
@@ -556,13 +567,26 @@ def main():
         print("fx shape:" + str(fx_test.shape))
         print("fx_train shape:" + str(fx_train.shape))
 
-        fx_mu = fx_test.mean(axis=0)
-        fx_high = np.percentile(fx_test, 95, axis=0)
-        fx_low = np.percentile(fx_test, 5, axis=0)
 
-        fx_mu_tr = fx_train.mean(axis=0)
-        fx_high_tr = np.percentile(fx_train, 95, axis=0)
-        fx_low_tr = np.percentile(fx_train, 5, axis=0)
+        print(fx_test[int(burnin):], fx_train[int(burnin):])
+
+
+        fx_tr_1 = fx_train[int(burnin):, 0, :]
+        fx_tr_2 = fx_train[int(burnin):, 1, :]
+        fx_tr_3 = fx_train[int(burnin):, 2, :]
+        fx_tr_4 = fx_train[int(burnin):, 3, :]
+
+        fx_train = np.asarray([fx_tr_1, fx_tr_2, fx_tr_3, fx_tr_4])
+
+
+        fx_ts_1 = fx_test[int(burnin):, 0, :]
+        fx_ts_2 = fx_test[int(burnin):, 1, :]
+        fx_ts_3 = fx_test[int(burnin):, 2, :]
+        fx_ts_4 = fx_test[int(burnin):, 3, :]
+
+        # print(fx_ts_1.shape)
+
+        fx_test = np.asarray([fx_ts_1, fx_ts_2, fx_ts_3, fx_ts_4])
 
         pos_w_mean = pos_w.mean(axis=0)
         # np.savetxt(outpos_w, pos_w_mean, fmt='%1.5f')
@@ -577,92 +601,100 @@ def main():
         ytestdata = testdata[:, input[problem]:]
         ytraindata = traindata[:, input[problem]:]
 
-        train_acc = []
-        test_acc = []
+        train_acc = np.zeros((subtasks, fx_tr_1.shape[0]))
+        test_acc = np.zeros((subtasks, fx_ts_1.shape[0]))
 
-        for fx in fx_train:
-            count = 0
-            for index in range(fx.shape[0]):
-                if np.isclose(fx[index], ytraindata[index], atol=0.2).all():
-                    count += 1
-            train_acc.append(float(count) / fx.shape[0] * 100)
 
-        for fx in fx_test:
-            count = 0
-            for index in range(fx.shape[0]):
-                if np.isclose(fx[index], ytestdata[index], atol=0.2).all():
-                    count += 1
-            test_acc.append(float(count) / fx.shape[0] * 100)
+        # print(fx_test,fx_train)
 
-        train_acc = np.array(train_acc[int(burnin):])
-        train_std = np.std(train_acc[int(burnin):])
 
-        test_acc = np.array(test_acc[int(burnin):])
-        test_std = np.std(test_acc[int(burnin):])
+        for fx_sub_in in range(fx_train.shape[0]):
+            fx_sub = fx_train[fx_sub_in]
+            acc = np.zeros(fx_sub.shape[0])
+            for fx_in in range(fx_sub.shape[0]):
+                count = 0
+                for index in range(fx_sub[fx_in].shape[0]):
+                    if np.isclose(fx_sub[fx_in][index], ytraindata[index], atol=0.2).all():
+                        count += 1
+                acc[fx_in] = (float(count) / fx_sub[fx_in].shape[0] * 100)
+            train_acc[fx_sub_in] = acc
 
-        train_acc_mu = train_acc.mean()
-        test_acc_mu = test_acc.mean()
+        for fx_sub_in in range(fx_test.shape[0]):
+            fx_sub = fx_test[fx_sub_in]
+            acc = np.zeros(fx_sub.shape[0])
+            for fx_in in range(fx_sub.shape[0]):
+                count = 0
+                for index in range(fx_sub[fx_in].shape[0]):
+                    if np.isclose(fx_sub[fx_in][index], ytestdata[index], atol=0.5).all():
+                        count += 1
+                acc[fx_in] = (float(count) / fx_sub[fx_in].shape[0] * 100)
+            test_acc[fx_sub_in] = acc
 
-        train_accs[problem] = train_acc_mu
-        test_accs[problem] = test_acc_mu
-        train_stds[problem] = train_std
-        test_stds[problem] = test_std
+        train_accs[problem] = train_acc.mean(axis=1)
+        test_accs[problem] = test_acc.mean(axis=1)
 
-        testResults = np.c_[ytestdata, fx_mu, fx_high, fx_low]
+        train_stds[problem] = np.std(train_acc, axis=1)
+        test_stds[problem] = np.std(test_acc, axis=1)
 
-        trainResults = np.c_[ytraindata, fx_mu_tr, fx_high_tr, fx_low_tr]
+        print(train_stds[problem], test_stds[problem], train_accs[problem], test_accs[problem])
 
-        # Write RMSE to
-        with open("Results/" +
-                  filenames[problem] + "_rmse" + ".txt", 'w') as fil:
-            rmse = [rmse_tr, rmsetr_std, rmse_tes, rmsetest_std]
-            rmse = "\t".join(list(map(str, rmse))) + "\n"
-            fil.write(rmse)
+        # train_accs[problem] = train_acc_mu
+        # test_accs[problem] = test_acc_mu
+        # train_stds[problem] = train_std
+        # test_stds[problem] = test_std
 
-    n_groups = len(filenames)
-    fig, ax = plt.subplots()
-    index = np.arange(n_groups)
-    bar_width = 0.2
-    opacity = 0.8
-    capsize = 3
 
-    filetrain = open('Results/train.txt', 'w+')
-    filetest = open('Results/test.txt', 'w+')
-    filestdtr = open('Results/std_tr.txt', 'w+')
-    filestdts = open('Results/std_ts.txt', 'w+')
+        # # Write RMSE to
+        # with open("Results/" +
+        #           filenames[problem] + "_rmse" + ".txt", 'w') as fil:
+        #     rmse = [rmse_tr, rmsetr_std, rmse_tes, rmsetest_std]
+        #     rmse = "\t".join(list(map(str, rmse))) + "\n"
+        #     fil.write(rmse)
 
-    np.savetxt(filetrain, train_accs, fmt='%2.2f')
-    np.savetxt(filestdtr, train_stds, fmt='%2.2f')
-    np.savetxt(filetest, test_accs, fmt='%2.2f')
-    np.savetxt(filestdts, test_stds, fmt='%2.2f')
-
-    filetrain.close()
-    filetest.close()
-    filestdtr.close()
-    filestdts.close()
-
-    print(train_accs)
-    plt.bar(index + float(bar_width) / 2, train_accs, bar_width,
-            alpha=opacity,
-            error_kw=dict(elinewidth=1, ecolor='r'),
-            yerr=train_stds,
-            color='c',
-            label='train')
-
-    plt.bar(index + float(bar_width) / 2 + bar_width, test_accs, bar_width,
-            alpha=opacity,
-            error_kw=dict(elinewidth=1, ecolor='g'),
-            yerr=test_stds,
-            color='b',
-            label='test')
-    plt.xlabel('Datasets')
-    plt.ylabel('Accuracy')
-    plt.xticks(index + bar_width, filenames, rotation=70)
-    plt.legend()
-
-    plt.tight_layout()
-    plt.savefig('barplt.png')
-    plt.show()
+    # n_groups = len(filenames)
+    # fig, ax = plt.subplots()
+    # index = np.arange(n_groups)
+    # bar_width = 0.2
+    # opacity = 0.8
+    # capsize = 3
+    #
+    # filetrain = open('Results/train.txt', 'w+')
+    # filetest = open('Results/test.txt', 'w+')
+    # filestdtr = open('Results/std_tr.txt', 'w+')
+    # filestdts = open('Results/std_ts.txt', 'w+')
+    #
+    # np.savetxt(filetrain, train_accs, fmt='%2.2f')
+    # np.savetxt(filestdtr, train_stds, fmt='%2.2f')
+    # np.savetxt(filetest, test_accs, fmt='%2.2f')
+    # np.savetxt(filestdts, test_stds, fmt='%2.2f')
+    #
+    # filetrain.close()
+    # filetest.close()
+    # filestdtr.close()
+    # filestdts.close()
+    #
+    # print(train_accs)
+    # plt.bar(index + float(bar_width) / 2, train_accs, bar_width,
+    #         alpha=opacity,
+    #         error_kw=dict(elinewidth=1, ecolor='r'),
+    #         yerr=train_stds,
+    #         color='c',
+    #         label='train')
+    #
+    # plt.bar(index + float(bar_width) / 2 + bar_width, test_accs, bar_width,
+    #         alpha=opacity,
+    #         error_kw=dict(elinewidth=1, ecolor='g'),
+    #         yerr=test_stds,
+    #         color='b',
+    #         label='test')
+    # plt.xlabel('Datasets')
+    # plt.ylabel('Accuracy')
+    # plt.xticks(index + bar_width, filenames, rotation=70)
+    # plt.legend()
+    #
+    # plt.tight_layout()
+    # plt.savefig('barplt.png')
+    # plt.show()
 
 
 if __name__ == "__main__": main()
