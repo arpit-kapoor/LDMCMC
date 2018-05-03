@@ -284,7 +284,7 @@ class MCMC:
             diff = min(700, diff_prior + diff_likelihood + diff_prop)
 
             # print()
-            print(diff, i )
+            # print(diff, i )
             mh_prob = min(1, math.exp(diff))
             # print(mh_prob)
 
@@ -303,7 +303,7 @@ class MCMC:
                 eta = eta_pro
 
                 elapsed_time = ":".join(covert_time(int(time.time()-start)))
-                #sys.stdout.write('\r' + file + ' : ' + str(round(float(i) / (samples - 1) * 100, 2)) + '% complete....'+" time elapsed: " + elapsed_time)
+                sys.stdout.write('\r' + file + ' : ' + str("{:.2f}".format(float(i) / (samples - 1) * 100)) + '% complete....'+" time elapsed: " + elapsed_time)
                 # print  likelihood, prior_current, diff_prop, rmsetrain, rmsetest, w, 'accepted'
                 #print w_proposal, 'w_proposal'
                 #print w_gd, 'w_gd'
@@ -350,7 +350,7 @@ def main():
     hidden = np.array([6, 6, 6, 16, 20, 5, 30, 8, 6, 5, 8, 14, 14])
     output = np.array([2, 3, 1, 1, 1, 1, 1, 1, 7, 3, 3, 4, 4])
 
-    samplelist = [5000, 8000, 10000, 20000, 15000, 5000, 20000, 5000, 3000, 5000, 2000, 20000, 10000]
+    samplelist = [5000, 8000, 10000, 20000, 15000, 5000, 20000, 5000, 3000, 5000, 2000, 10000, 10000]
     x = 3
 
     filetrain = open('Results/train.txt', 'r')
@@ -378,7 +378,7 @@ def main():
         #w_limit =  0.02
         #tau_limit = 0.1
 
-    for problem in [11]:
+    for problem in problemlist:
 
         #if os.path.isfile("Results/"+filenames[problem]+"_rmse.txt"):
         #    print filenames[problem]
@@ -395,7 +395,7 @@ def main():
         mcmc = MCMC(numSamples, traindata, testdata, topology)  # declare class
 
         [pos_w, pos_tau, fx_train, fx_test, x_train, x_test, rmse_train, rmse_test, accept_ratio] = mcmc.sampler(w_limit, tau_limit, filenames[problem])
-        print 'sucessfully sampled: '+ str(accept_ratio)+ ' samples accepted'
+        print '\nsucessfully sampled: '+ str(accept_ratio)+ ' samples accepted'
 
         burnin = 0.1 * numSamples  # use post burn in samples
 
@@ -440,7 +440,7 @@ def main():
         for fx in fx_test:
             count = 0
             for index in range(fx.shape[0]):
-                if np.isclose(fx[index],ytestdata[index],atol = 0.2).all():
+                if np.isclose(fx[index],ytestdata[index],atol = 0.5).all():
                     count += 1
             test_acc.append(float(count)/fx.shape[0]*100)
        
